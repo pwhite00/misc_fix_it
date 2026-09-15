@@ -11,15 +11,33 @@
 # Usage: double-click this file in Finder (you'll be asked for your Mac
 # password), or run it from Terminal: ./Fix-BattleNet.command
 #
+# Options:
+#   --user=<name>   Clean up this user's files instead of auto-detecting
+#                    the logged-in user. Useful when running as/from an
+#                    admin account other than the one whose files need
+#                    cleaning (e.g. over SSH, or a separate admin session).
+#
 set -uo pipefail
 
-if [[ "${1:-}" == "--nuke" ]]; then
-  echo "The full 'nuke and reinstall everything' mode (including WoW) isn't"
-  echo "built yet. Run this without --nuke for the normal repair, or ask"
-  echo "Peter to finish the nuke mode first."
-  read -rp "Press Enter to close..." _
-  exit 1
-fi
+TARGET_USER_OVERRIDE=""
+for arg in "$@"; do
+  case "$arg" in
+    --nuke)
+      echo "The full 'nuke and reinstall everything' mode (including WoW) isn't"
+      echo "built yet. Run this without --nuke for the normal repair, or ask"
+      echo "Peter to finish the nuke mode first."
+      read -rp "Press Enter to close..." _
+      exit 1
+      ;;
+    --user=*)
+      TARGET_USER_OVERRIDE="${arg#*=}"
+      ;;
+    *)
+      echo "Unknown option: $arg"
+      exit 1
+      ;;
+  esac
+done
 
 LOG_DIR="/Users/Shared/BattleNetFixLogs"
 
@@ -36,13 +54,23 @@ mkdir -p "$LOG_DIR"
 LOG_FILE="${LOG_DIR}/fix-$(date +%Y%m%d-%H%M%S).log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
-TARGET_USER="$(stat -f '%Su' /dev/console)"
+if [[ -n "$TARGET_USER_OVERRIDE" ]]; then
+  TARGET_USER="$TARGET_USER_OVERRIDE"
+  TARGET_SOURCE="--user flag"
+else
+  TARGET_USER="$(stat -f '%Su' /dev/console)"
+  TARGET_SOURCE="console session"
+fi
+
+if ! TARGET_UID="$(id -u "$TARGET_USER" 2>/dev/null)"; then
+  echo "Error: '$TARGET_USER' is not a valid user on this Mac."
+  exit 1
+fi
 TARGET_HOME="/Users/${TARGET_USER}"
-TARGET_UID="$(id -u "$TARGET_USER")"
 
 echo "=============================================="
 echo " Battle.net Fix-It - repair mode"
-echo " User: ${TARGET_USER}   Date: $(date)"
+echo " User: ${TARGET_USER} (via ${TARGET_SOURCE})   Date: $(date)"
 echo "=============================================="
 echo
 echo "This will:"
