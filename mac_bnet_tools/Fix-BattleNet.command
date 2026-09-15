@@ -86,9 +86,54 @@ read -rp "Press Enter to continue, or close this window to cancel..." _
 
 echo
 echo "--- Step 1: Quitting Battle.net ---"
-pkill -i -f "/Applications/Battle.net.app" 2>/dev/null || true
-pkill -i -f "/Users/Shared/Battle.net" 2>/dev/null || true
-sleep 2
+BNET_PATH_PATTERNS=(
+  "/Applications/Battle.net.app"
+  "/Users/Shared/Battle.net"
+)
+# Exact process-name matches as a safety net, in case a helper (e.g. the
+# Agent, Switcher, or relauncher) is running from a path not covered above.
+# pkill -x matches the exact process name only, not a substring, so this
+# won't catch unrelated processes like "BiomeAgent".
+BNET_EXACT_NAMES=(
+  "Battle.net"
+  "Agent"
+  "Switcher"
+  "relauncher"
+)
+
+still_running() {
+  for pattern in "${BNET_PATH_PATTERNS[@]}"; do
+    pgrep -i -f "$pattern" >/dev/null 2>&1 && return 0
+  done
+  for name in "${BNET_EXACT_NAMES[@]}"; do
+    pgrep -x "$name" >/dev/null 2>&1 && return 0
+  done
+  return 1
+}
+
+for attempt in 1 2 3; do
+  if [[ $attempt -eq 1 ]]; then
+    for pattern in "${BNET_PATH_PATTERNS[@]}"; do
+      pkill -i -f "$pattern" 2>/dev/null || true
+    done
+  else
+    echo "  Still running - sending a harder kill (attempt ${attempt})..."
+    for pattern in "${BNET_PATH_PATTERNS[@]}"; do
+      pkill -9 -i -f "$pattern" 2>/dev/null || true
+    done
+    for name in "${BNET_EXACT_NAMES[@]}"; do
+      pkill -9 -x "$name" 2>/dev/null || true
+    done
+  fi
+  sleep 2
+  still_running || break
+done
+
+if still_running; then
+  echo "  WARNING: a Battle.net process is still running after 3 attempts."
+  echo "  Continuing anyway - the file removal step below will still run,"
+  echo "  but a restart may be needed to fully clear it."
+fi
 
 echo
 echo "--- Step 2: Removing Battle.net files ---"
@@ -133,7 +178,7 @@ do
     LEFTOVER=1
   fi
 done
-if pgrep -i -f "battle.net" >/dev/null 2>&1; then
+if still_running; then
   echo "  WARNING: a Battle.net-related process is still running."
   LEFTOVER=1
 fi
