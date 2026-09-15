@@ -11,6 +11,8 @@
 # Usage: double-click this file in Finder (you'll be asked for your Mac
 # password), or run it from Terminal: ./Fix-BattleNet.command
 #
+# Full walkthrough: https://docs.google.com/document/d/1C6tS66DZJk20AKf4DfeWij0cG8sP6PDcPzlWsLnlcYU/edit?tab=t.0
+#
 # Options:
 #   --user=<name>   Clean up this user's files instead of auto-detecting
 #                    the logged-in user. Useful when running as/from an
@@ -72,6 +74,9 @@ echo "=============================================="
 echo " Battle.net Fix-It - repair mode"
 echo " User: ${TARGET_USER} (via ${TARGET_SOURCE})   Date: $(date)"
 echo "=============================================="
+echo
+echo "Full walkthrough with screenshots/steps:"
+echo "https://docs.google.com/document/d/1C6tS66DZJk20AKf4DfeWij0cG8sP6PDcPzlWsLnlcYU/edit?tab=t.0"
 echo
 echo "This will:"
 echo "  1. Quit Battle.net and its helper processes"
